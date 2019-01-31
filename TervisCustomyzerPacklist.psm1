@@ -290,7 +290,7 @@ function Install-CustomyzerPackListGenerationApplication {
 		[Parameter(Mandatory)]$ComputerName
 	)
 	$Environment = Get-CustomyzerEnvironment -EnvironmentName $EnvironmentName
-	$PassswordstateAPIKey = Get-TervisPasswordstatePassword -Guid $Environment.PasswordStateAPIKeyPasswordGUID |
+	$PasswordstateAPIKey = Get-TervisPasswordstatePassword -Guid $Environment.PasswordStateAPIKeyPasswordGUID |
 	Select-Object -ExpandProperty Password
 	
 	$PowerShellApplicationParameters = @{
@@ -318,7 +318,7 @@ ImportExcel
 posh-ssh
 "@ -split "`r`n"
 	CommandString = @"
-Set-PasswordstateAPIKey -APIKey $PassswordstateAPIKey
+Set-PasswordstateAPIKey -APIKey $PasswordstateAPIKey
 Set-PasswordstateAPIType -APIType Standard
 Set-CustomyzerModuleEnvironment -Name $EnvironmentName
 Invoke-CutomyzerPackListProcess -EnvironmentName $EnvironmentName

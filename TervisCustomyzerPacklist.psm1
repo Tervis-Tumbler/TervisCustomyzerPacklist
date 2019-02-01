@@ -1,10 +1,3 @@
-$ModulePath = if ($PSScriptRoot) {
-	$PSScriptRoot
-} else {
-	(Get-Module -ListAvailable TervisCustomyzerPacklist).ModuleBase
-}
-. $ModulePath\Definition.ps1
-
 function Invoke-CutomyzerPackListProcess {
 	param (
 		$EnvironmentName
@@ -48,6 +41,7 @@ function Invoke-CustomyzerPackListDocumentsGenerate {
 		XLSXFilePath = New-CustomyzerPacklistXlsx @Parameters -DateTime $DateTime
 		CSVFilePath = New-CustomyzerPurchaseRequisitionCSV @Parameters
 		XMLFilePath = New-CustomyzerPackListXML @Parameters -DateTime $DateTime
+		XMLRewriteFinalArchedImageLocationForNewWebToPrintFilePath = New-CustomyzerPackListXML @Parameters -DateTime $DateTime -RewriteFinalArchedImageLocationForNewWebToPrint
 	}
 }
 
@@ -166,13 +160,29 @@ function Set-CustomyzerPackListXlsxRowValues {
 		$PackListXlsxLinesIndexNumber += 1
 	}
 }
+function Set-StringValueFirstOccurence {
+    param (
+        [Parameter(Mandatory,ValueFromPipeline)]$String,
+        [Parameter(Mandatory)]$OldValue,
+        [Parameter(Mandatory)]$NewValue
+    )
+    process {
+        $PositionOfOldValueInString = $String.IndexOf($OldValue)
+        if ($PositionOfOldValueInString -ne -1) {
+            $String.Substring(0, $PositionOfOldValueInString) + $NewValue + $String.Substring($PositionOfOldValueInString + $OldValue.Length)
+        } else {
+            $String
+        }    
+    }
+}
 
 function New-CustomyzerPackListXML {
 	param (
 		[Parameter(Mandatory)]$BatchNumber,
 		[Parameter(Mandatory)]$PackListLines,
 		[Parameter(Mandatory)]$Path,
-		$DateTime = (Get-Date)
+		$DateTime = (Get-Date),
+		[Switch]$RewriteFinalArchedImageLocationForNewWebToPrint
 	)
 
 	$XMLContent = New-XMLDocument -AsString -InnerElements {
@@ -189,7 +199,16 @@ function New-CustomyzerPackListXML {
 						New-XMLElement -Name size -InnerText $PackListLine.SizeAndFormType
 						New-XMLElement -Name itemNumber -InnerText $PackListLine.OrderDetail.Project.FinalFGCode
 						New-XMLElement -Name scheduleNumber -InnerText $PackListLine.ScheduleNumber
-						New-XMLElement -Name fileName -InnerElements ( New-XMLCDATA -Value $PackListLine.OrderDetail.Project.FinalArchedImageLocation )
+						New-XMLElement -Name fileName -InnerElements {
+							New-XMLCDATA -Value (
+								if (-not $RewriteFinalArchedImageLocationForNewWebToPrint) {
+									$PackListLine.OrderDetail.Project.FinalArchedImageLocation	
+								} elseif ($RewriteFinalArchedImageLocationForNewWebToPrint) {
+									$PackListLine.OrderDetail.Project.FinalArchedImageLocation |
+									Set-StringValueFirstOccurence -OldValue "http://images.tervis.com" -NewValue "http://images2.tervis.com"	
+								}
+							)
+						}
 					}
 				}
 			}
@@ -247,6 +266,7 @@ function Send-CustomyzerPackListDocument {
 	param (
 		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$XLSXFilePath,
 		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$XMLFilePath,
+		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$XMLRewriteFinalArchedImageLocationForNewWebToPrintFilePath,
 		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$CSVFilePath,
 		[Parameter(Mandatory)]$EnvironmentName,
 		[Parameter(Mandatory)]$BatchNumber,
@@ -269,7 +289,8 @@ function Send-CustomyzerPackListDocument {
 		Send-TervisMailMessage @MailMessageParameters -BodyAsHTML
 
 		New-PSDrive -Name PackListXMLDestination -PSProvider FileSystem -Root $CustomyzerEnvironment.PackListXMLDestinationPath -Credential $CustomyzerEnvironment.FileShareAccount | Out-Null
-		$XMLFilePath, $XLSXFilePath | Copy-Item -Destination PackListXMLDestination:\ -Force
+		$XMLFilePath, $XMLRewriteFinalArchedImageLocationForNewWebToPrintFilePath, $XLSXFilePath | 
+		Copy-Item -Destination PackListXMLDestination:\ -Force
 		Remove-PSDrive -Name PackListXMLDestination
 
 		Set-TervisEBSEnvironment -Name $EnvironmentName
@@ -279,7 +300,8 @@ function Send-CustomyzerPackListDocument {
 		$ArchivePath = "$($CustomyzerEnvironment.PackListFilesPathRoot)\Inbound\PackLists\Archive"
 
 		New-PSDrive -Name Archive -PSProvider FileSystem -Root $ArchivePath -Credential $CustomyzerEnvironment.FileShareAccount | Out-Null
-		$XLSXFilePath, $XMLFilePath, $CSVFilePath | Copy-Item -Destination Archive:\ -Force
+		$XLSXFilePath, $XMLFilePath, $XMLRewriteFinalArchedImageLocationForNewWebToPrintFilePath, $CSVFilePath |
+		Copy-Item -Destination Archive:\ -Force
 		Remove-PSDrive -Name Archive
 	}
 }
@@ -330,31 +352,31 @@ Invoke-CutomyzerPackListProcess -EnvironmentName $EnvironmentName
 
 function New-CustomizerPackListXMLWithJust16OzOneOff {
     $EnvironmentName = "Production"
-$DateTime = (Get-Date)
+	$DateTime = (Get-Date)
 
-Set-CustomyzerModuleEnvironment -Name $EnvironmentName
-Get-CustomyzerApprovalPacklistRecentBatch;
+	Set-CustomyzerModuleEnvironment -Name $EnvironmentName
+	# Get-CustomyzerApprovalPacklistRecentBatch
 
-$BatchNumbers = "20181129-1300","20181128-1300"
-foreach ($BatchNumber in $BatchNumbers) {
-    $PackListLines = Get-CustomyzerApprovalPackList -BatchNumber $BatchNumber
-    $PackListLinesSorted = Invoke-CustomyzerPackListLinesSort -PackListLines $PackListLines
-    $Size16PackListLinesSorted = $PackListLinesSorted |
-    Where-Object {
-        $_.Orderdetail.Project.Product.Form.Size -eq 16
-    }
+	$BatchNumber = "20190109-1300"
+	foreach ($BatchNumber in $BatchNumbers) {
+		$PackListLines = Get-CustomyzerApprovalPackList -BatchNumber $BatchNumber
+		$PackListLinesSorted = Invoke-CustomyzerPackListLinesSort -PackListLines $PackListLines
+		$Size16PackListLinesSorted = $PackListLinesSorted |
+		Where-Object {
+			$_.Orderdetail.Project.Product.Form.Size -eq 16
+		}
 
-	$CustomyzerPackListTemporaryFolder = New-CustomyzerPackListTemporaryFolder -BatchNumber $BatchNumber -EnvironmentName $EnvironmentName
+		$CustomyzerPackListTemporaryFolder = New-CustomyzerPackListTemporaryFolder -BatchNumber $BatchNumber -EnvironmentName $EnvironmentName
 
-    $Parameters = @{
-		BatchNumber = $BatchNumber
-		PackListLines = $Size16PackListLinesSorted
-		Path = $CustomyzerPackListTemporaryFolder.FullName
-    }
-    $XMLFilePath = New-CustomyzerPackListXML @Parameters -DateTime $DateTime
-}
+		$Parameters = @{
+			BatchNumber = $BatchNumber
+			PackListLines = $PackListLinesSorted
+			Path = $CustomyzerPackListTemporaryFolder.FullName
+		}
+		$XMLFilePath = New-CustomyzerPackListXML @Parameters -DateTime $DateTime
+	}
 
-# $MissingOne = $Size16PackListLinesSorted | where {
-#     -not $_.OrderDetail.Project.FinalArchedImageLocation
-# }
+	# $MissingOne = $Size16PackListLinesSorted | where {
+	#     -not $_.OrderDetail.Project.FinalArchedImageLocation
+	# }
 }

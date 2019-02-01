@@ -1,3 +1,9 @@
+$ModulePath = if ($PSScriptRoot) {
+    $PSScriptRoot
+} else {
+    (Get-Module -ListAvailable TervisApplication).ModuleBase
+}
+
 function Invoke-CutomyzerPackListProcess {
 	param (
 		$EnvironmentName
@@ -85,7 +91,7 @@ function New-CustomyzerPacklistXlsx {
 		}
 	}
 
-	$Excel = Export-Excel -Path $ModulePath\PackListTemplate.xlsx -PassThru
+	$Excel = Export-Excel -Path $Script:ModulePath\PackListTemplate.xlsx -PassThru
 	$PackingListWorkSheet = $Excel.Workbook.Worksheets["PackingList"]
 
 	Set-CustomyzerPackListXlsxHeaderValues -PackingListWorkSheet $PackingListWorkSheet -PackListXlsxLines $RecordToWriteToExcel -DateTime $DateTime
@@ -200,7 +206,7 @@ function New-CustomyzerPackListXML {
 						New-XMLElement -Name itemNumber -InnerText $PackListLine.OrderDetail.Project.FinalFGCode
 						New-XMLElement -Name scheduleNumber -InnerText $PackListLine.ScheduleNumber
 						New-XMLElement -Name fileName -InnerElements {
-							New-XMLCDATA -Value (
+							New-XMLCDATA -Value $(
 								if (-not $RewriteFinalArchedImageLocationForNewWebToPrint) {
 									$PackListLine.OrderDetail.Project.FinalArchedImageLocation	
 								} elseif ($RewriteFinalArchedImageLocationForNewWebToPrint) {
@@ -215,7 +221,12 @@ function New-CustomyzerPackListXML {
 		}
 	}
 
-	$XMLFileName = "TervisPackList-$BatchNumber.xml"
+	$XMLFileName = if (-not $RewriteFinalArchedImageLocationForNewWebToPrint) {
+		"TervisPackList-$BatchNumber.xml"
+	} elseif ($RewriteFinalArchedImageLocationForNewWebToPrint) {
+		"TervisPackList-$BatchNumber-NewWebToPrint.xml"
+	}
+
 	$XMLFilePath = "$Path\$XMLFileName"
 	$XMLContent | Out-File -FilePath $XMLFilePath -Encoding ascii
 	$XMLFilePath

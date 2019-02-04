@@ -345,6 +345,7 @@ PowerShellORM
 OracleE-BusinessSuitePowerShell
 TervisMailMessage
 TervisOracleE-BusinessSuitePowerShell
+TervisCustomyzer
 "@ -split "`r`n"
 	PowerShellGalleryDependencies = @"
 ImportExcel

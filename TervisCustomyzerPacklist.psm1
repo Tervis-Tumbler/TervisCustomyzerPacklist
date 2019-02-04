@@ -334,17 +334,17 @@ function Install-CustomyzerPackListGenerationApplication {
 		ScheduledTasksCredential = New-Crednetial -Username system
 		ScheduledTaskName = "CustomyzerPackListGeneration"
 		TervisModuleDependencies = @"
-OracleE-BusinessSuitePowerShell
-PowerShellORM
-InvokeSQL
-TervisApplication
-TervisMailMessage
 TervisMicrosoft.PowerShell.Security
 TervisMicrosoft.PowerShell.Utility
-TervisOracleE-BusinessSuitePowerShell
 PasswordstatePowerShell
 TervisPasswordstatePowerShell
+TervisApplication
 WebServicesPowerShellProxyBuilder
+InvokeSQL
+PowerShellORM
+OracleE-BusinessSuitePowerShell
+TervisMailMessage
+TervisOracleE-BusinessSuitePowerShell
 "@ -split "`r`n"
 	PowerShellGalleryDependencies = @"
 ImportExcel

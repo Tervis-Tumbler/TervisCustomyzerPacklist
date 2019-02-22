@@ -222,9 +222,9 @@ function New-CustomyzerPackListXML {
 	}
 
 	$XMLFileName = if (-not $RewriteFinalArchedImageLocationForNewWebToPrint) {
-		"TervisPackList-$BatchNumber-OldWebToPrint.xml2"
+		"TervisPackList-$BatchNumber-OldWebToPrint.xml"
 	} elseif ($RewriteFinalArchedImageLocationForNewWebToPrint) {
-		"TervisPackList-$BatchNumber-NewWebToPrint.xml"
+		"TervisPackList-$BatchNumber-NewWebToPrint.xml2"
 	}
 
 	$XMLFilePath = "$Path\$XMLFileName"

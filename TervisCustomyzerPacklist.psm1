@@ -393,3 +393,26 @@ function New-CustomizerPackListXMLWithJust16OzOneOff {
 	#     -not $_.OrderDetail.Project.FinalArchedImageLocation
 	# }
 }
+
+function Test-PDFFilesForCorruption {
+	param (
+		$Path
+	)
+	$PDFFiles = Get-ChildItem -Path $Path -Recurse -Filter *.pdf
+	$Jobs = foreach ($PDFFile in $PDFFiles) {
+		Start-RSJob -ScriptBlock {
+			Set-Location -Path $($Using:PDFFile).Directory
+			wsl pdfinfo $($Using:PDFFile).Name | Out-Null
+			if ($LastExitCode) {
+				$($Using:PDFFile).Name
+			}
+		}	
+	}
+
+	$Jobs |
+	Wait-RSJob |
+	Receive-RSJob
+
+	$Jobs |
+	Remove-RSJob
+}

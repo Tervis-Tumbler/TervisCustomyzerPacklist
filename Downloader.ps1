@@ -128,3 +128,7 @@ Receive-Job -AutoRemoveJob -Wait
 # '246030',
 # '245941'
 # )
+
+#UpdateBatchRenderLogStatus http://tfs2012:8080/tfs/DefaultCollection/MES/_search?type=Code&lp=search-project&text=def%3AUpdateBatchRenderLogStatus&result=DefaultCollection%2FMES%2F%24%2FMES%2F7968%2F%24%2FMES%2FSource%2FDev%2FTervis.MES.Graphics%2FTervis.MES.Graphics.Shared.Data%2FRepository%2FBatchRepository.cs&filters=ProjectFilters%7BMES%7D&preview=1&_a=contents
+#WebClient_DownloadProgressChanged http://tfs2012:8080/tfs/DefaultCollection/MES/_search?type=Code&lp=search-project&text=def%3ADownloadBatchFile&result=DefaultCollection%2FMES%2F%24%2FMES%2F8021%2F%24%2FMES%2FSource%2FMain%2FTervis.MES.Graphics%2FTervis.MES.Graphics.Services%2FCustomizerService.cs&filters=ProjectFilters%7BMES%7D&preview=1&_a=contents
+#DownloadHelixPdfFilesAsync

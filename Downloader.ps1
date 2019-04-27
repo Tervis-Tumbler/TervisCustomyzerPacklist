@@ -62,11 +62,11 @@ FROM (
 				[SalesLineNumber]
 			ORDER BY [ProcessingFinish] desc
 		) as RowNumber
-    FROM [MES].[Graphics].[GraphicsBatchRenderLog]
+    FROM [MES].[Graphics].[GraphicsBatchRenderLog] with (nolock)
 	WHERE GraphicsBatchHeaderID > 19996
-	AND ProcessingStatus = 'Failed'
 ) as PartitionedTable
 WHERE PartitionedTable.RowNumber = 1
+AND ProcessingStatus = 'Failed'
 order by id desc
 "@
 
@@ -84,23 +84,31 @@ Add-Member -MemberType ScriptProperty -Name DestinationURLEscaped -Value {
 } -Force -PassThru |
 Add-Member -MemberType ScriptProperty -Name TempFileName -Value {
     "$($This.DestinationUrl).tmp"
-} -Force -PassThru |
-Where-Object GraphicsBatchHeaderID -eq 20080 |
-#Select-Object -First 30 |
+} -Force
+
+#Where-Object GraphicsBatchHeaderID -eq 20080 |
+
+$GraphicsBatchRenderLogLinesToFix |
 ForEach-Object {
     $GraphicsBatchRenderLogLine = $_
     if (-not (Test-Path -LiteralPath $GraphicsBatchRenderLogLine.DestinationURL)) {
-        try {
+    Start-ThreadJob -ThrottleLimit 10 -ScriptBlock {
+        $ErrorActionPreference = "Inquire"
+            $ProgressPreference = "SilentlyContinue"
+            $GraphicsBatchRenderLogLine = $Using:GraphicsBatchRenderLogLine
+            Write-Verbose $GraphicsBatchRenderLogLine.DestinationURL
             $GraphicsBatchRenderLogLine | Set-MESGraphicsGraphicsBatchRenderLog -ProcessingStatus Processing
             Invoke-WebRequest -Uri $GraphicsBatchRenderLogLine.SourceURLNewWebToPrint -OutFile $($GraphicsBatchRenderLogLine.DestinationURLEscaped) -UseBasicParsing
             Rename-Item -LiteralPath $GraphicsBatchRenderLogLine.DestinationURLEscaped -NewName $GraphicsBatchRenderLogLine.DestinationURL
-            Remove-Item -LiteralPath $GraphicsBatchRenderLogLine.TempFileName
-            $GraphicsBatchRenderLogLine | Set-MESGraphicsGraphicsBatchRenderLog -ProcessingStatus Success    
-        } catch {
-
+            Remove-Item -LiteralPath $GraphicsBatchRenderLogLine.TempFileName -ErrorAction SilentlyContinue
+            $GraphicsBatchRenderLogLine | Set-MESGraphicsGraphicsBatchRenderLog -ProcessingStatus Success
         }
     }
-}
+} |
+Receive-Job -AutoRemoveJob -Wait
+
+  
+        
 
 # public enum GraphicsProcessingStatus
 # {
@@ -110,3 +118,13 @@ ForEach-Object {
 #     Failed,
 #     Success,
 # }
+
+# update [Graphics].[GraphicsBatchRenderLog]
+# set
+# [ProcessingStatus] = 'Success'
+
+# where 1 = 1
+# AND [Graphics].[GraphicsBatchRenderLog].[ID] in (
+# '246030',
+# '245941'
+# )

@@ -63,10 +63,10 @@ FROM (
 			ORDER BY [ProcessingFinish] desc
 		) as RowNumber
     FROM [MES].[Graphics].[GraphicsBatchRenderLog] with (nolock)
-	WHERE GraphicsBatchHeaderID > 19996
+	WHERE GraphicsBatchHeaderID > 20123
 ) as PartitionedTable
 WHERE PartitionedTable.RowNumber = 1
-AND ProcessingStatus = 'Failed'
+AND ProcessingStatus in ('Failed','Processing')
 order by id desc
 "@
 
@@ -92,22 +92,22 @@ $GraphicsBatchRenderLogLinesToFix |
 ForEach-Object {
     $GraphicsBatchRenderLogLine = $_
     if (-not (Test-Path -LiteralPath $GraphicsBatchRenderLogLine.DestinationURL)) {
-    Start-ThreadJob -ThrottleLimit 10 -ScriptBlock {
-        $ErrorActionPreference = "Inquire"
+        Start-ThreadJob -ThrottleLimit 10 -ScriptBlock {
+            $ErrorActionPreference = "Inquire"
             $ProgressPreference = "SilentlyContinue"
             $GraphicsBatchRenderLogLine = $Using:GraphicsBatchRenderLogLine
-            Write-Verbose $GraphicsBatchRenderLogLine.DestinationURL
             $GraphicsBatchRenderLogLine | Set-MESGraphicsGraphicsBatchRenderLog -ProcessingStatus Processing
             Invoke-WebRequest -Uri $GraphicsBatchRenderLogLine.SourceURLNewWebToPrint -OutFile $($GraphicsBatchRenderLogLine.DestinationURLEscaped) -UseBasicParsing
             Rename-Item -LiteralPath $GraphicsBatchRenderLogLine.DestinationURLEscaped -NewName $GraphicsBatchRenderLogLine.DestinationURL
             Remove-Item -LiteralPath $GraphicsBatchRenderLogLine.TempFileName -ErrorAction SilentlyContinue
             $GraphicsBatchRenderLogLine | Set-MESGraphicsGraphicsBatchRenderLog -ProcessingStatus Success
         }
+    } else {
+        $GraphicsBatchRenderLogLine | Set-MESGraphicsGraphicsBatchRenderLog -ProcessingStatus Success
     }
 } |
 Receive-Job -AutoRemoveJob -Wait
 
-  
         
 
 # public enum GraphicsProcessingStatus

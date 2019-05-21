@@ -12,8 +12,12 @@ function Invoke-CutomyzerPackListProcess {
 	if ($BatchNumber) {
 		$DateTime = Get-Date
 		$DocumentFilePaths = Invoke-CustomyzerPackListDocumentsGenerate -BatchNumber $BatchNumber -DateTime $DateTime -EnvironmentName $EnvironmentName
+		
 		$DocumentFilePaths |
 		Send-CustomyzerPackListDocument -EnvironmentName $EnvironmentName -DateTime $DateTime -BatchNumber $BatchNumber
+		
+		$DocumentFilePaths |
+		Send-CustomyzerPackListDocumentToArchive -EnvironmentName $EnvironmentName
 	}
 }
 
@@ -307,7 +311,19 @@ function Send-CustomyzerPackListDocument {
 		Set-TervisEBSEnvironment -Name $EnvironmentName
 		$EBSIASNode = Get-EBSIASNode
 		Set-SFTPFile -RemotePath $CustomyzerEnvironment.RequisitionDestinationPath -LocalFile $CSVFilePath -SFTPSession $EBSIASNode.SFTPSession -Overwrite:$Overwrite
+	}
+}
 
+function Send-CustomyzerPackListDocumentToArchive {
+	param (
+		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$XLSXFilePath,
+		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$XMLFilePath,
+		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$XMLRewriteFinalArchedImageLocationForNewWebToPrintFilePath,
+		[Parameter(Mandatory,ValueFromPipelineByPropertyName)]$CSVFilePath,
+		[Parameter(Mandatory)]$EnvironmentName
+	)
+	process {
+		$CustomyzerEnvironment = Get-CustomyzerEnvironment -EnvironmentName $EnvironmentName
 		$ArchivePath = "$($CustomyzerEnvironment.PackListFilesPathRoot)\Inbound\PackLists\Archive"
 
 		New-PSDrive -Name Archive -PSProvider FileSystem -Root $ArchivePath -Credential $CustomyzerEnvironment.FileShareAccount | Out-Null

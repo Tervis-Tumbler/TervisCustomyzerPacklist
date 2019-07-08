@@ -432,3 +432,37 @@ function Test-PDFFilesForCorruption {
 	$Jobs |
 	Remove-RSJob
 }
+
+function Invoke-CustomyzerPacklistDownload {
+	param (
+		$XmlFilePath,
+		$PDFOutputFolderPath
+	)
+	$Content = Get-Content -Path $XmlFilePath
+	[XML]$PackListXMLLines = $Content
+	$FolderName = $PackListXMLLines.packList.batchNumber #Ex: 20190424-1300
+	
+	$PackListXMLLines.packList.orders.order |
+	Add-Member -MemberType ScriptProperty -Name PDFFileName -Value {
+		"$($This.Size)-$($This.salesOrderNumber)-$($This.salesLineNumber)-$($This.itemQuantity).pdf" #Ex: 16DWT-11488993-6-1.pdf
+	} -Force -PassThru |
+	Add-Member -MemberType ScriptProperty -Name OutFilePath -Value {
+		"$PDFOutputFolder\$FolderName\$($This.PDFFileName)"
+	}
+
+	$PackListXMLLines.packList.orders.order |
+	ForEach-Object {
+		$PackListLine = $_
+		Start-ThreadJob -ThrottleLimit 10 -ScriptBlock {
+			$PackListLine = $Using:PackListLine
+			$OutFilePath = "$Using:PDFOutputFolder\$Using:FolderName\$($PackListLine.PDFFileName)"
+			if (-not (Test-Path -Path $OutFilePath)) {
+				$ProgressPreference = "SilentlyContinue"
+		
+				$URL = "$($PackListLine.Filename.'#cdata-section')&`$orderNum=$($PackListLine.salesOrderNumber)/$($PackListLine.salesLineNumber)"
+				Invoke-WebRequest -OutFile $OutFilePath -Uri $URL -UseBasicParsing
+			}
+		}
+	} |
+	Receive-Job -AutoRemoveJob -Wait
+}

@@ -6,9 +6,10 @@ $ModulePath = if ($PSScriptRoot) {
 
 function Invoke-CutomyzerPackListProcess {
 	param (
-		$EnvironmentName
+		$EnvironmentName,
+		[Parameter(Mandatory)]$SiteCodeID
 	)
-	$BatchNumber = New-CustomyzerPacklistBatch
+	$BatchNumber = New-CustomyzerPacklistBatch -SiteCodeID $SiteCodeID
 	if ($BatchNumber) {
 		$DateTime = Get-Date
 		$DocumentFilePaths = Invoke-CustomyzerPackListDocumentsGenerate -BatchNumber $BatchNumber -DateTime $DateTime -EnvironmentName $EnvironmentName
@@ -22,7 +23,10 @@ function Invoke-CutomyzerPackListProcess {
 }
 
 function New-CustomyzerPacklistBatch {
-	$PackListLinesNotInBatch = Get-CustomyzerApprovalPackList -NotInBatch
+	param (
+		[Parameter(Mandatory)]$SiteCodeID
+	)
+	$PackListLinesNotInBatch = Get-CustomyzerApprovalPackList -NotInBatch -SiteCodeID $SiteCodeID
 
 	if ($PackListLinesNotInBatch) {
 		$BatchNumber = New-CustomyzerBatchNumber

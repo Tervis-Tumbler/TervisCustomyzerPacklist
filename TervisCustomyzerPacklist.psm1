@@ -198,6 +198,7 @@ function New-CustomyzerPackListXML {
 		$DateTime = (Get-Date),
 		[Switch]$RewriteFinalArchedImageLocationForNewWebToPrint
 	)
+	$InsertAfterQuantity = 500
 
 	$XMLContent = New-XMLDocument -AsString -InnerElements {
 		New-XMLElement -Name packList -InnerElements {
@@ -206,23 +207,27 @@ function New-CustomyzerPackListXML {
 			New-XMLElement -Name batchTime -InnerText $DateTime.ToString("hh:mm tt")
 			New-XMLElement -Name orders -InnerElements {
 				foreach ($PackListLine in $PackListLines) {
-					New-XMLElement -Name order -InnerElements {
-						New-XMLElement -Name salesOrderNumber -InnerText $PackListLine.OrderDetail.Order.ERPOrderNumber
-						New-XMLElement -Name salesLineNumber -InnerText $PackListLine.OrderDetail.ERPOrderLineNumber
-						New-XMLElement -Name itemQuantity -InnerText $PackListLine.Quantity
-						New-XMLElement -Name size -InnerText $PackListLine.SizeAndFormType
-						New-XMLElement -Name itemNumber -InnerText $PackListLine.OrderDetail.Project.FinalFGCode
-						New-XMLElement -Name scheduleNumber -InnerText $PackListLine.ScheduleNumber
-						New-XMLElement -Name fileName -InnerElements {
-							New-XMLCDATA -Value $(
-								if (-not $RewriteFinalArchedImageLocationForNewWebToPrint) {
-									$PackListLine.OrderDetail.Project.FinalArchedImageLocation	
-								} elseif ($RewriteFinalArchedImageLocationForNewWebToPrint) {
-									$PackListLine.OrderDetail.Project.FinalArchedImageLocation |
-									Set-StringValueFirstOccurence -OldValue "http://images.tervis.com" -NewValue "http://images2.tervis.com"	
-								}
-							)
+					if ($PackListLine.Quantity -lt $InsertAfterQuantity) {
+						New-TervisCustomyzerPackListOrderXmlElement `
+							-PackListLine $PackListLine `
+							-RewriteFinalArchedImageLocationForNewWebToPrint:$RewriteFinalArchedImageLocationForNewWebToPrint
+					} else {
+						$NumberOfInserts = [Math]::Floor($PackListLine.Quantity / $InsertAfterQuantity)
+						$QuantityAfterFinalInsert = (($PackListLine.Quantity / $InsertAfterQuantity) % 1) * $PackListLine.Quantity
+						foreach ($NumberOfInsert in $NumberOfInserts) {
+							New-TervisCustomyzerPackListOrderXmlElement `
+								-PackListLine $PackListLine `
+								-ItemQuantity $NumberOfInsert * $InsertAfterQuantity `
+								-FileNameCDATAValue $(
+
+								)
+							
 						}
+
+						New-TervisCustomyzerPackListOrderXmlElement `
+							-PackListLine $PackListLine `
+							-ItemQuantity $QuantityAfterFinalInsert `
+							-RewriteFinalArchedImageLocationForNewWebToPrint:$RewriteFinalArchedImageLocationForNewWebToPrint
 					}
 				}
 			}
@@ -238,6 +243,71 @@ function New-CustomyzerPackListXML {
 	$XMLFilePath = "$Path\$XMLFileName"
 	$XMLContent | Out-File -FilePath $XMLFilePath -Encoding ascii
 	$XMLFilePath
+}
+
+function New-TervisCustomyzerPackListOrderXmlElement {
+	param (
+		[Parameter(Mandatory)]$PackListLine,
+		$ItemQuantity,
+		[Parameter(Mandatory)]$FileNameCDATAValue,
+		[Switch]$RewriteFinalArchedImageLocationForNewWebToPrint
+	)
+
+	if (-not $ItemQuantity) {
+		$ItemQuantity = $PackListLine.Quantity
+	}
+
+	if (-not $FileNameCDATAValue) {
+		$FileNameCDATAValue = if (-not $RewriteFinalArchedImageLocationForNewWebToPrint) {
+			$PackListLine.OrderDetail.Project.FinalArchedImageLocation	
+		} elseif ($RewriteFinalArchedImageLocationForNewWebToPrint) {
+			$PackListLine.OrderDetail.Project.FinalArchedImageLocation |
+			Set-StringValueFirstOccurence -OldValue "http://images.tervis.com" -NewValue "http://images2.tervis.com"	
+		}
+	}
+
+	New-XMLElement -Name order -InnerElements {
+		New-XMLElement -Name salesOrderNumber -InnerText $PackListLine.OrderDetail.Order.ERPOrderNumber
+		New-XMLElement -Name salesLineNumber -InnerText $PackListLine.OrderDetail.ERPOrderLineNumber
+		New-XMLElement -Name itemQuantity -InnerText $ItemQuantity
+		New-XMLElement -Name size -InnerText $PackListLine.SizeAndFormType
+		New-XMLElement -Name itemNumber -InnerText $PackListLine.OrderDetail.Project.FinalFGCode
+		New-XMLElement -Name scheduleNumber -InnerText $PackListLine.ScheduleNumber
+		New-XMLElement -Name fileName -InnerElements {
+			New-XMLCDATA -Value $(
+				$FileNameCDATAValue
+			)
+		}
+	}
+}
+
+function New-CustomyzerPackListSeparatorWrapPrintableFileURL {
+	param (
+		$SalesOrderNumber,
+		$SalesLineNumber,
+		$ScheduleNumber,
+		$ProductSize,
+		$ProductFormType
+	)
+	$ProductMetaData = Get-CustomyzerSizeAndFormTypeMetaData -Size $ProductSize -FormType $ProductFormType
+
+	$TextValue = (@(
+		$SalesOrderNumber,
+		$SalesLineNumber,
+		$ScheduleNumber,
+		$ProductSize,
+		$ProductFormType
+	) | ForEach-Object { "\fs200%20$_\line"}) -join ""
+	$ColorInkImageURL = [System.Web.HttpUtility]::UrlEncode("https://images.tervis.com/is/image/tervis?wid=$($ProductMetaData.PrintImageDimensions.Width)&hei=$($ProductMetaData.PrintImageDimensions.Height)&text=$TextValue&fmt=png-alpha&scl=1")
+	$WhiteInkImageURL = [System.Web.HttpUtility]::UrlEncode("https://images.tervis.com/is/image/tervis?wid=$($ProductMetaData.PrintImageDimensions.Width)&hei=$($ProductMetaData.PrintImageDimensions.Height)&text=$TextValue&op_invert=1&fmt=png,gray&scl=1")
+	@"
+		https://images2.tervis.com/PrintableFile?
+		ColorInkImageURL=$ColorInkImageURL
+		&WhiteInkImageURL=$WhiteInkImageURL
+		&OrderNumber=$SalesOrderNumber/$SalesLineNumber
+		&ProductSize=$ProductSize
+		&ProductFormType=$ProductFormType
+"@ | Remove-WhiteSpace
 }
 
 function New-CustomyzerPurchaseRequisitionCSV {

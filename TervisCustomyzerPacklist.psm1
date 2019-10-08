@@ -376,7 +376,7 @@ posh-ssh
 Set-PasswordstateAPIKey -APIKey $PasswordstateAPIKey
 Set-PasswordstateAPIType -APIType Standard
 Set-CustomyzerModuleEnvironment -Name $EnvironmentName
-Invoke-CutomyzerPackListProcess -EnvironmentName $EnvironmentName
+Invoke-CutomyzerPackListProcess -EnvironmentName $EnvironmentName -SiteCodeID 3
 "@
 	}
 

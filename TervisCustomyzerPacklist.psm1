@@ -254,12 +254,17 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 	}
 
 	if (-not $FileNameCDATAValue) {
-		$FileNameCDATAValue = if (-not $RewriteFinalArchedImageLocationForNewWebToPrint) {
-			$PackListLine.OrderDetail.Project.FinalArchedImageLocation	
-		} elseif ($RewriteFinalArchedImageLocationForNewWebToPrint) {
-			$PackListLine.OrderDetail.Project.FinalArchedImageLocation |
-			Set-StringValueFirstOccurence -OldValue "http://images.tervis.com" -NewValue "http://images2.tervis.com"	
-		}
+		$PrintableFileUrlParameters = [PSCustomObject]@{
+			CustomyzerProjectID = $PackListLine.OrderDetail.Project.ProjectID.GUID
+			ProductSize = $PackListLine.OrderDetail.Project.Product.Form.Size
+			ProductFormType = $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper()
+			IDPrintedOnDecoration = if ($PackListLine.OrderDetail.Project.SiteCode -ne "Promo") {
+				"$($PackListLine.OrderDetail.Order.ERPOrderNumber)/$($PackListLine.OrderDetail.ERPOrderLineNumber)"
+			}
+			VuMarkID = $PackListLine.OrderDetail.Project.Project_ARAsset.VumarkID
+		} | Remove-PSObjectEmptyOrNullProperty
+
+		$FileNameCDATAValue = New-TervisPrintableFileURL @PrintableFileUrlParameters
 	}
 
 	New-XMLElement -Name order -InnerElements {
@@ -433,6 +438,7 @@ TervisMailMessage
 TervisOracleE-BusinessSuitePowerShell
 TervisCustomyzer
 TervisCustomyzerPacklist
+TervisPrintableFilePS
 "@ -split "`r`n"
 	PowerShellGalleryDependencies = @"
 ImportExcel

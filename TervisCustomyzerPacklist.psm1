@@ -212,14 +212,19 @@ function New-CustomyzerPackListXML {
 							-PackListLine $PackListLine `
 							-RewriteFinalArchedImageLocationForNewWebToPrint:$RewriteFinalArchedImageLocationForNewWebToPrint
 					} else {
-						$NumberOfInserts = [Math]::Floor($PackListLine.Quantity / $InsertAfterQuantity)
+						$NumberOfInserts = 1..[Math]::Floor($PackListLine.Quantity / $InsertAfterQuantity)
 						$QuantityAfterFinalInsert = (($PackListLine.Quantity / $InsertAfterQuantity) % 1) * $PackListLine.Quantity
 						foreach ($NumberOfInsert in $NumberOfInserts) {
 							New-TervisCustomyzerPackListOrderXmlElement `
 								-PackListLine $PackListLine `
 								-ItemQuantity $NumberOfInsert * $InsertAfterQuantity `
 								-FileNameCDATAValue $(
-
+									New-CustomyzerPackListSeparatorWrapPrintableFileURL `
+										-ProductFormType $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper() `
+										-ProductSize $PackListLine.OrderDetail.Project.Product.Form.Size `
+										-SalesOrderNumber $PackListLine.OrderDetail.Order.ERPOrderNumber `
+										-SalesLineNumber $PackListLine.OrderDetail.ERPOrderLineNumber `
+										-ScheduleNumber $PackListLine.ScheduleNumber
 								)
 							
 						}

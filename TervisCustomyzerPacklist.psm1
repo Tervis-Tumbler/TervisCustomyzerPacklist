@@ -198,8 +198,6 @@ function New-CustomyzerPackListXML {
 		$DateTime = (Get-Date),
 		[Switch]$RewriteFinalArchedImageLocationForNewWebToPrint
 	)
-	$InsertAfterQuantity = 500
-
 	$XMLContent = New-XMLDocument -AsString -InnerElements {
 		New-XMLElement -Name packList -InnerElements {
 			New-XMLElement -Name batchNumber -InnerText $BatchNumber
@@ -209,7 +207,8 @@ function New-CustomyzerPackListXML {
 				foreach ($PackListLine in $PackListLines) {
 					New-TervisCustomyzerPackListOrderXmlElement `
 						-PackListLine $PackListLine `
-						-ItemQuantity $NumberOfInsert * $InsertAfterQuantity `
+						-ItemQuantity 1 `
+						-SalesLineNumber 0 `
 						-FileNameCDATAValue $(
 							New-CustomyzerPackListSeparatorWrapPrintableFileURL `
 								-ProductFormType $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper() `
@@ -241,12 +240,17 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 	param (
 		[Parameter(Mandatory)]$PackListLine,
 		$ItemQuantity,
+		$SalesLineNumber,
 		[Parameter(Mandatory)]$FileNameCDATAValue,
 		[Switch]$RewriteFinalArchedImageLocationForNewWebToPrint
 	)
 
 	if (-not $ItemQuantity) {
 		$ItemQuantity = $PackListLine.Quantity
+	}
+
+	if (-not $SalesLineNumber) {
+		$SalesLineNumber = $PackListLine.OrderDetail.ERPOrderLineNumber
 	}
 
 	if (-not $FileNameCDATAValue) {
@@ -260,7 +264,7 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 
 	New-XMLElement -Name order -InnerElements {
 		New-XMLElement -Name salesOrderNumber -InnerText $PackListLine.OrderDetail.Order.ERPOrderNumber
-		New-XMLElement -Name salesLineNumber -InnerText $PackListLine.OrderDetail.ERPOrderLineNumber
+		New-XMLElement -Name salesLineNumber -InnerText $SalesLineNumber
 		New-XMLElement -Name itemQuantity -InnerText $ItemQuantity
 		New-XMLElement -Name size -InnerText $PackListLine.SizeAndFormType
 		New-XMLElement -Name itemNumber -InnerText $PackListLine.OrderDetail.Project.FinalFGCode

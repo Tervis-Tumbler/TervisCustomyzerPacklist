@@ -241,7 +241,7 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 		[Parameter(Mandatory)]$PackListLine,
 		$ItemQuantity,
 		$SalesLineNumber,
-		[Parameter(Mandatory)]$FileNameCDATAValue,
+		$FileNameCDATAValue,
 		[Switch]$RewriteFinalArchedImageLocationForNewWebToPrint
 	)
 
@@ -249,7 +249,7 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 		$ItemQuantity = $PackListLine.Quantity
 	}
 
-	if (-not $SalesLineNumber) {
+	if ($SalesLineNumber -eq [System.Management.Automation.Internal.AutomationNull]::Value) {
 		$SalesLineNumber = $PackListLine.OrderDetail.ERPOrderLineNumber
 	}
 

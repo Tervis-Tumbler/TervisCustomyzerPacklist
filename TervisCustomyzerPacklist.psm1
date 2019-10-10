@@ -207,33 +207,20 @@ function New-CustomyzerPackListXML {
 			New-XMLElement -Name batchTime -InnerText $DateTime.ToString("hh:mm tt")
 			New-XMLElement -Name orders -InnerElements {
 				foreach ($PackListLine in $PackListLines) {
-					if ($PackListLine.Quantity -lt $InsertAfterQuantity) {
-						New-TervisCustomyzerPackListOrderXmlElement `
-							-PackListLine $PackListLine `
-							-RewriteFinalArchedImageLocationForNewWebToPrint:$RewriteFinalArchedImageLocationForNewWebToPrint
-					} else {
-						$NumberOfInserts = 1..[Math]::Floor($PackListLine.Quantity / $InsertAfterQuantity)
-						$QuantityAfterFinalInsert = (($PackListLine.Quantity / $InsertAfterQuantity) % 1) * $PackListLine.Quantity
-						foreach ($NumberOfInsert in $NumberOfInserts) {
-							New-TervisCustomyzerPackListOrderXmlElement `
-								-PackListLine $PackListLine `
-								-ItemQuantity $NumberOfInsert * $InsertAfterQuantity `
-								-FileNameCDATAValue $(
-									New-CustomyzerPackListSeparatorWrapPrintableFileURL `
-										-ProductFormType $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper() `
-										-ProductSize $PackListLine.OrderDetail.Project.Product.Form.Size `
-										-SalesOrderNumber $PackListLine.OrderDetail.Order.ERPOrderNumber `
-										-SalesLineNumber $PackListLine.OrderDetail.ERPOrderLineNumber `
-										-ScheduleNumber $PackListLine.ScheduleNumber
-								)
-							
-						}
-
-						New-TervisCustomyzerPackListOrderXmlElement `
-							-PackListLine $PackListLine `
-							-ItemQuantity $QuantityAfterFinalInsert `
-							-RewriteFinalArchedImageLocationForNewWebToPrint:$RewriteFinalArchedImageLocationForNewWebToPrint
-					}
+					New-TervisCustomyzerPackListOrderXmlElement `
+						-PackListLine $PackListLine `
+						-ItemQuantity $NumberOfInsert * $InsertAfterQuantity `
+						-FileNameCDATAValue $(
+							New-CustomyzerPackListSeparatorWrapPrintableFileURL `
+								-ProductFormType $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper() `
+								-ProductSize $PackListLine.OrderDetail.Project.Product.Form.Size `
+								-SalesOrderNumber $PackListLine.OrderDetail.Order.ERPOrderNumber `
+								-SalesLineNumber $PackListLine.OrderDetail.ERPOrderLineNumber `
+								-ScheduleNumber $PackListLine.ScheduleNumber
+						)
+					New-TervisCustomyzerPackListOrderXmlElement `
+						-PackListLine $PackListLine `
+						-RewriteFinalArchedImageLocationForNewWebToPrint:$RewriteFinalArchedImageLocationForNewWebToPrint
 				}
 			}
 		}

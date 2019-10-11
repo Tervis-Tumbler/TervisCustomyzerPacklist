@@ -208,7 +208,7 @@ function New-CustomyzerPackListXML {
 					New-TervisCustomyzerPackListOrderXmlElement `
 						-PackListLine $PackListLine `
 						-ItemQuantity 1 `
-						-SalesLineNumber 0 `
+						-SalesLineNumber "$($PackListLine.OrderDetail.ERPOrderLineNumber - .5)" `
 						-FileNameCDATAValue $(
 							New-CustomyzerPackListSeparatorWrapPrintableFileURL `
 								-ProductFormType $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper() `
@@ -254,7 +254,7 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 	}
 
 	if (-not $FileNameCDATAValue) {
-		$PrintableFileUrlParameters = [PSCustomObject]@{
+		$PrintableFileUrlParameters = @{
 			CustomyzerProjectID = $PackListLine.OrderDetail.Project.ProjectID.GUID
 			ProductSize = $PackListLine.OrderDetail.Project.Product.Form.Size
 			ProductFormType = $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper()
@@ -262,7 +262,7 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 				"$($PackListLine.OrderDetail.Order.ERPOrderNumber)/$($PackListLine.OrderDetail.ERPOrderLineNumber)"
 			}
 			VuMarkID = $PackListLine.OrderDetail.Project.Project_ARAsset.VumarkID
-		} | Remove-PSObjectEmptyOrNullProperty
+		} | Remove-HashtableKeysWithEmptyOrNullValues
 
 		$FileNameCDATAValue = New-TervisPrintableFileURL @PrintableFileUrlParameters
 	}

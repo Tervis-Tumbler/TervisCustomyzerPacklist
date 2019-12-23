@@ -64,7 +64,7 @@ function New-CustomyzerPackListTemporaryFolder {
 		[Parameter(Mandatory)]$BatchNumber,
 		[Parameter(Mandatory)]$EnvironmentName
 	)
-	$TemporaryFolderPath = "$([System.IO.Path]::GetTempPath())\$EnvironmentName-$BatchNumber"
+	$TemporaryFolderPath = "$([System.IO.Path]::GetTempPath())$EnvironmentName-$BatchNumber"
 	Remove-Item -LiteralPath $TemporaryFolderPath -Force -Recurse -ErrorAction SilentlyContinue
 	New-Item -ItemType Directory -Path $TemporaryFolderPath -Force
 }
@@ -254,13 +254,14 @@ function New-TervisCustomyzerPackListOrderXmlElement {
 	}
 
 	if (-not $FileNameCDATAValue) {
+		$IDPrintedOnDecoration = if ($PackListLine.OrderDetail.Project.SiteCode -ne "Promo") {
+			"$($PackListLine.OrderDetail.Order.ERPOrderNumber)/$($PackListLine.OrderDetail.ERPOrderLineNumber)"
+		}
 		$PrintableFileUrlParameters = @{
 			CustomyzerProjectID = $PackListLine.OrderDetail.Project.ProjectID.GUID
 			ProductSize = $PackListLine.OrderDetail.Project.Product.Form.Size
 			ProductFormType = $PackListLine.OrderDetail.Project.Product.Form.FormType.ToUpper()
-			IDPrintedOnDecoration = if ($PackListLine.OrderDetail.Project.SiteCode -ne "Promo") {
-				"$($PackListLine.OrderDetail.Order.ERPOrderNumber)/$($PackListLine.OrderDetail.ERPOrderLineNumber)"
-			}
+			IDPrintedOnDecoration = $IDPrintedOnDecoration
 			VuMarkID = $PackListLine.OrderDetail.Project.Project_ARAsset.VumarkID
 		} | Remove-HashtableKeysWithEmptyOrNullValues
 

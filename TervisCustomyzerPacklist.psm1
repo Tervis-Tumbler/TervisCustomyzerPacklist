@@ -4,7 +4,7 @@ $ModulePath = if ($PSScriptRoot) {
     (Get-Module -ListAvailable TervisApplication).ModuleBase
 }
 
-function Invoke-CutomyzerPackListProcess {
+function Invoke-CustomyzerPackListProcess {
 	param (
 		$EnvironmentName,
 		[Parameter(Mandatory)]$SiteCodeID
@@ -449,7 +449,7 @@ posh-ssh
 Set-PasswordstateAPIKey -APIKey $PasswordstateAPIKey
 Set-PasswordstateAPIType -APIType Standard
 Set-CustomyzerModuleEnvironment -Name $EnvironmentName
-Invoke-CutomyzerPackListProcess -EnvironmentName $EnvironmentName -SiteCodeID 3
+Invoke-CustomyzerPackListProcess -EnvironmentName $EnvironmentName -SiteCodeID 3
 "@
 	}
 
